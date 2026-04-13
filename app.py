@@ -8,14 +8,31 @@ import os
 import httpx
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 app = FastAPI()
 
+# ── CORS (allow tsblack.in to call this proxy) ────────────────
+ALLOWED_ORIGINS = [
+    "https://tsblack.in",
+    "https://www.tsblack.in",
+    "http://localhost:3000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # ── Config ────────────────────────────────────────────────────
 # Set these as Secrets in your HF Space settings:
 #   HF_TOKEN  — same token used in backend
-#   BACKEND_URL — your private space URL e.g. https://meetsoni17-tds-backend.hf.space
+#   BACKEND_URL — your private space URL e.g. https://meetsoni7-tds-backend.hf.space
 BACKEND = os.environ.get("BACKEND_URL", "").rstrip("/")
 TOKEN   = os.environ.get("HF_TOKEN", "")
 HEADERS = {"Authorization": f"Bearer {TOKEN}"}
