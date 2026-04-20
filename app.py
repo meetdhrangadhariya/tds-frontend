@@ -182,13 +182,17 @@ async def form16_extract(files: List[UploadFile] = File(...)):
 
 
 @app.post("/api/form16/export")
-async def form16_export(files: List[UploadFile] = File(...)):
-    """Proxy Form 16A PDF export requests to the private backend."""
+async def form16_export(request: Request):
+    """Proxy Form 16A export (JSON rows) to the private backend."""
     if not BACKEND:
         return _no_backend()
-    tuples = await _read_files(files, "application/pdf")
-    async with httpx.AsyncClient(timeout=300) as client:
-        resp = await client.post(f"{BACKEND}/api/form16/export", files=tuples, headers=HEADERS)
+    body = await request.json()
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(
+            f"{BACKEND}/api/form16/export",
+            json=body,
+            headers=HEADERS,
+        )
     if resp.status_code != 200:
         return JSONResponse({"detail": "Form 16A export failed"}, status_code=resp.status_code)
     cd = resp.headers.get("Content-Disposition", 'attachment; filename="Form16A_Export.xlsx"')
