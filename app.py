@@ -4,13 +4,15 @@ Forwards all requests to the private backend, adding the secret token.
 
 Routes
 ------
-  GET  /                      — serve tds-challan-extractor.html
+  GET  /                       — serve tds-challan-extractor.html
   GET  /health
-  POST /api/parse             — PDF challan parse  → backend /api/parse
-  POST /api/export            — PDF challan export → backend /api/export
-  POST /api/simulate-interest — interest calc      → backend /api/simulate-interest
-  POST /api/tds/parse         — Dot TDS parse      → backend /api/tds/parse
-  POST /api/tds/export        — Dot TDS export     → backend /api/tds/export
+  POST /api/parse              — PDF challan parse  → backend /api/parse
+  POST /api/export             — PDF challan export → backend /api/export
+  POST /api/simulate-interest  — interest calc      → backend /api/simulate-interest
+  POST /api/tds/parse          — Dot TDS parse      → backend /api/tds/parse
+  POST /api/tds/export         — Dot TDS export     → backend /api/tds/export
+  POST /api/form16/extract     — Form 16A extract   → backend /api/form16/extract
+  POST /api/form16/export      — Form 16A export    → backend /api/form16/export
 """
 
 import os
@@ -162,3 +164,36 @@ async def simulate(request: Request):
             f"{BACKEND}/api/simulate-interest", json=body, headers=HEADERS
         )
     return JSONResponse(resp.json(), status_code=resp.status_code)
+
+
+# ─────────────────────────────────────────────────────────────────
+# TOOL 2 — FORM 16A EXTRACTOR
+# ─────────────────────────────────────────────────────────────────
+
+@app.post("/api/form16/extract")
+async def form16_extract(files: List[UploadFile] = File(...)):
+    """Proxy Form 16A PDF extract requests to the private backend."""
+    if not BACKEND:
+        return _no_backend()
+    tuples = await _read_files(files, "application/pdf")
+    async with httpx.AsyncClient(timeout=300) as client:
+        resp = await client.post(f"{BACKEND}/api/form16/extract", files=tuples, headers=HEADERS)
+    return JSONResponse(resp.json(), status_code=resp.status_code)
+
+
+@app.post("/api/form16/export")
+async def form16_export(files: List[UploadFile] = File(...)):
+    """Proxy Form 16A PDF export requests to the private backend."""
+    if not BACKEND:
+        return _no_backend()
+    tuples = await _read_files(files, "application/pdf")
+    async with httpx.AsyncClient(timeout=300) as client:
+        resp = await client.post(f"{BACKEND}/api/form16/export", files=tuples, headers=HEADERS)
+    if resp.status_code != 200:
+        return JSONResponse({"detail": "Form 16A export failed"}, status_code=resp.status_code)
+    cd = resp.headers.get("Content-Disposition", 'attachment; filename="Form16A_Export.xlsx"')
+    return StreamingResponse(
+        iter([resp.content]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": cd},
+    )
