@@ -4,7 +4,7 @@ Forwards all requests to the private backend, adding the secret token.
 
 Routes
 ------
-  GET  /                       — serve tds-challan-extractor.html
+  GET  /                       — serve tdsauditsuite.html
   GET  /health
   POST /api/parse              — PDF challan parse  → backend /api/parse
   POST /api/export             — PDF challan export → backend /api/export
@@ -72,7 +72,7 @@ def _no_backend():
 @app.get("/", response_class=HTMLResponse)
 def index():
     try:
-        return open("tds-challan-extractor.html", encoding="utf-8").read()
+        return open("tdsauditsuite.html", encoding="utf-8").read()
     except FileNotFoundError:
         return HTMLResponse("<h2>Frontend HTML file not found.</h2>", status_code=500)
 
